@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-public class FileServerApplicationTests {
+public class FileServerControllerIT {
 
 	@Autowired
 	private MockMvc mvc;
