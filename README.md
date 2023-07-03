@@ -1,12 +1,12 @@
-Requries:
+Requires:
 - Java 20
 - mvn 3.9.3
 
 To run the program run the following in the fileServer directory:
-    ./mvnw spring-boot:run
+- ./mvnw spring-boot:run
 
 View health of application
-    curl localhost:8080/actuator/health
+- curl localhost:8080/actuator/health
 
 Remotely shutdown application (not enabled):
     curl -X POST localhost:8080/actuator/shutdown
