@@ -4,6 +4,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+
 import java.time.LocalDate;
 
 // maybe in future add file sharing?
@@ -16,7 +18,6 @@ public class File {
     private long id;
 
     private LocalDate dateUploaded;
-    private User owner;
     private String name;
     private String type;
     private String filePath;
@@ -25,9 +26,20 @@ public class File {
     private String description;
     private long size;
 
+    @ManyToOne
+    private User owner;
+
     // maybe replace some setters (or just call them) in constructor if they arent going to be changed.
     public File() {
         this.dateUploaded = LocalDate.now();
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 
     public long getId() {
@@ -36,14 +48,6 @@ public class File {
 
     public LocalDate getDateUploaded() {
         return this.dateUploaded;
-    }
-
-    public User getOwner() {
-        return this.owner;
-    }
-
-    public void setOwner(User owner) {
-        this.owner = owner;
     }
 
     public String getName() {

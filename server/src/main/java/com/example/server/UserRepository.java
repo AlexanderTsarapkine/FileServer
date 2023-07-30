@@ -11,5 +11,5 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 // ^ used to customize REST endpoint, if omitted endpoint would be /websiteUsers instead of /users
     public interface UserRepository extends CrudRepository<User, Long> {
 
-    List<User> findByName(@Param("name") String name);
+    // List<User> findByName(@Param("name") String name);
 }

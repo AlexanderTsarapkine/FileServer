@@ -1,9 +1,12 @@
 package com.example.server;
-
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 public class User {
@@ -19,7 +22,23 @@ public class User {
     private String password;
     private String profilePicturePath;
     private String accountStatus;
-    private File[] files;
+
+    @OneToMany(cascade = CascadeType.ALL)
+    private List<File> files = new ArrayList<>();
+
+    public List<File> getFiles() {
+        return files;
+    }
+
+    public void addFile(File file) {
+        files.add(file);
+        file.setOwner(this);
+    }
+
+    public void removeFile(File file) {
+        files.remove(file);
+        file.setOwner(null);
+    }
 
     public long getId() {
         return id;
@@ -83,14 +102,6 @@ public class User {
 
     public void setAccountStatus(String accountStatus) {
         this.accountStatus = accountStatus;
-    }
-
-    public File[] getFiles() {
-        return files;
-    }
-
-    public void setFiles(File[] files) {
-        this.files = files;
     }
 
 }
