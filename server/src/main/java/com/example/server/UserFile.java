@@ -11,7 +11,7 @@ import java.time.LocalDate;
 // maybe in future add file sharing?
 
 @Entity
-public class File {
+public class UserFile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -30,7 +30,7 @@ public class File {
     private User owner;
 
     // maybe replace some setters (or just call them) in constructor if they arent going to be changed.
-    public File() {
+    public UserFile() {
         this.dateUploaded = LocalDate.now();
     }
 

@@ -1,20 +1,10 @@
 package com.example.server;
 import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private long id;
-
+public class UserDTO {
     private String firstName;
     private String lastName;
     private String email;
@@ -24,28 +14,18 @@ public class User {
     private String accountStatus;
 
     @OneToMany(cascade = CascadeType.ALL)
-    private List<UserFile> files = new ArrayList<>();
+    private List<UserFileDTO> files = new ArrayList<>();
 
-    public List<UserFile> getFiles() {
+    public List<UserFileDTO> getFiles() {
         return files;
     }
 
-    public void addFile(UserFile file) {
+    public void addFile(UserFileDTO file) {
         files.add(file);
-        file.setOwner(this);
     }
 
-    public void removeFile(UserFile file) {
+    public void removeFile(UserFileDTO file) {
         files.remove(file);
-        file.setOwner(null);
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     public String getFirstName() {
