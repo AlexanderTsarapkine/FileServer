@@ -2,7 +2,6 @@ package com.example.server;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,10 +25,15 @@ public class UserController {
     private UserRepository userRepository;
 
     @PostMapping("/users")
-    public ResponseEntity<?> createUser(@RequestBody User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
+    public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
+        if (userRepository.existsByEmail(userDTO.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists.");
         }
+
+        User user = new User();
+
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(userDTO.getPassword());
 
         // Create User Directory
         User savedUser = userRepository.save(user);
@@ -41,20 +46,11 @@ public class UserController {
         File filesSubdirectory = new File(filesFolderPath);
         filesSubdirectory.mkdir();
 
-        //  TEMPORARY USED FOR TESTING
-        String emptyFilePath = filesFolderPath + File.separator + "empty.txt";
-        File emptyFile = new File(emptyFilePath);
-        try {
-            emptyFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        //
-
         return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
     }
 
-    @GetMapping("/users")
+    // remove eventually
+    @GetMapping("/users/all")
     public ResponseEntity<List<User>> getUsers() {
         Iterable<User> usersIterable = userRepository.findAll();
         List<User> users = new ArrayList<>();
@@ -64,26 +60,52 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
-        if (!userRepository.existsById(id)) {
+    @GetMapping("/users")
+    public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
+        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            if(user.getPassword().equals(userDTO.getPassword())) {
+                return ResponseEntity.ok(user);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
+            }
+        } else {
             return ResponseEntity.notFound().build();
         }
+    }
 
-        String userFolderPath = DbFolderPath + File.separator + id;
-        File userFolder = new File(userFolderPath);
-        if (userFolder.exists()) {
-            try {
-                deleteFolder(userFolder);
-            } catch (IOException e) {
-                e.printStackTrace();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    @DeleteMapping("/users")
+    public ResponseEntity<?> deleteUser(@RequestBody UserDTO userDTO) {
+        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+            return ResponseEntity.notFound().build();
+        } else {
+            Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+            
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if(user.getPassword().equals(userDTO.getPassword())) {
+                    String userFolderPath = DbFolderPath + File.separator + user.getId();
+                    File userFolder = new File(userFolderPath);
+                    if (userFolder.exists()) {
+                        try {
+                            deleteFolder(userFolder);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                        }
+                    }
+                    userRepository.deleteById(user.getId());
+                    return ResponseEntity.ok("User deleted successfully.");
+                } else {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
+                }
+            } else {
+                return ResponseEntity.notFound().build();
             }
-        }
-
-        userRepository.deleteById(id);
-
-        return ResponseEntity.ok("User and directory deleted successfully.");
+            
+        }        
     }
 
     // @PostMapping("/users/uploadFile")
