@@ -147,10 +147,10 @@ public class UserController {
             return ResponseEntity.notFound().build();
         } else {
             Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
-            
+
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                if(user.getPassword().equals(userDTO.getPassword())) {
+                if (user.getPassword().equals(userDTO.getPassword())) {
                     try {
                         UserFile newFile = new UserFile();
 
@@ -159,13 +159,17 @@ public class UserController {
                         newFile.setSize(file.getSize());
 
                         user.getFiles().add(newFile);
-                        userRepository.save(user);
+                        User savedUser = userRepository.save(user);
 
-                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + newFile.getId();
+                        // Get the ID of the saved UserFile
+                        // maybe change or ensure things are saved in series?
+                        // maybe instead save by name?
+                        long savedFileId = savedUser.getFiles().get(savedUser.getFiles().size() - 1).getId();
+
+                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + savedFileId;
                         saveMultipartFileToLocalDisk(file, userFolderPath);
 
-                        
-                        return ResponseEntity.ok("File Created. " + newFile.getId());
+                        return ResponseEntity.ok("File Created.");
                     } catch (IOException e) {
                         e.printStackTrace();
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -176,7 +180,7 @@ public class UserController {
             } else {
                 return ResponseEntity.notFound().build();
             }
-            
+
         }
     }
 
