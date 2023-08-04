@@ -1,13 +1,18 @@
 package com.example.server;
 
-import org.springframework.web.multipart.MultipartFile;
-
 public class UserFileDTO {
+
+    private long id;
     private String name;
     private String type;
-    private MultipartFile file;
-    private String[] tags;
-    private String description;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -23,30 +28,6 @@ public class UserFileDTO {
 
     public void setType(String type) {
         this.type = type;
-    }
-
-    public MultipartFile getFile() {
-        return file;
-    }
-
-    public void setFile(MultipartFile file) {
-        this.file = file;
-    }
-
-    public String[] getTags() {
-        return tags;
-    }
-
-    public void setTags(String[] tags) {
-        this.tags = tags;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 }
 

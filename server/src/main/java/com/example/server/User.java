@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,15 +19,8 @@ public class User {
     private String email;
     private String password;
 
-    // public User(String firstName, String lastName, String email, String password) {
-    //     this.firstName = firstName;
-    //     this.lastName = lastName;
-    //     this.email = email;
-    //     this.password = password;
-    // }
-
-
     @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id") // This will create a foreign key column "user_id" in UserFile table
     private List<UserFile> files = new ArrayList<>();
 
     public List<UserFile> getFiles() {
@@ -35,12 +29,10 @@ public class User {
 
     public void addFile(UserFile file) {
         files.add(file);
-        file.setOwner(this);
     }
 
     public void removeFile(UserFile file) {
         files.remove(file);
-        file.setOwner(null);
     }
 
     public long getId() {

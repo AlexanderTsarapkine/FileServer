@@ -4,10 +4,16 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +30,7 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
+    // Create User
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {
@@ -49,7 +56,7 @@ public class UserController {
         return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
     }
 
-    // remove eventually
+    // Remove eventually
     @GetMapping("/users/all")
     public ResponseEntity<List<User>> getUsers() {
         Iterable<User> usersIterable = userRepository.findAll();
@@ -60,6 +67,7 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    // Get user and all files associated with them
     @GetMapping("/users")
     public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
         Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
@@ -67,6 +75,7 @@ public class UserController {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             if(user.getPassword().equals(userDTO.getPassword())) {
+                // maybe return UserDTO?
                 return ResponseEntity.ok(user);
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
@@ -76,6 +85,29 @@ public class UserController {
         }
     }
 
+    // NOT DONEEE
+    // Get user and all file previews associated with them
+    @GetMapping("/users/preview")
+    public ResponseEntity<?> getUserPreview(@RequestBody UserDTO userDTO) {
+        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            if(user.getPassword().equals(userDTO.getPassword())) {
+                UserDTO res = new UserDTO();
+                res.setEmail(user.getEmail());
+                res.setPassword(user.getPassword());
+                // iterate through all user files and get the file id along with date saved field and save to array
+
+                return ResponseEntity.ok(res);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
+            }
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Delete user and all files associated with them
     @DeleteMapping("/users")
     public ResponseEntity<?> deleteUser(@RequestBody UserDTO userDTO) {
         if (!userRepository.existsByEmail(userDTO.getEmail())) {
@@ -108,28 +140,58 @@ public class UserController {
         }        
     }
 
-    // @PostMapping("/users/uploadFile")
-    // public ResponseEntity<User> uploadFile(@RequestParam("userId") Long userId,
-    //                                        @ModelAttribute FileDTO fileDTO) {
-    //     // // Fetch the User from the database
-    //     // User user = userService.findUserById(userId);
-    //     // if (user == null) {
-    //     //     return ResponseEntity.notFound().build();
-    //     // }
-        
-    //     // try {
-    //     //     // Save the File entity and associate it with the User
-    //     //     fileService.saveFile(user, fileDTO);
-    //     // } catch (IOException e) {
-    //     //     // Handle the exception as needed
-    //     //     e.printStackTrace();
-    //     //     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-    //     // }
+    @PostMapping("/users/uploadFile")
+    public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
+            @RequestParam("file") MultipartFile file) {
+        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+            return ResponseEntity.notFound().build();
+        } else {
+            Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+            
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if(user.getPassword().equals(userDTO.getPassword())) {
+                    try {
+                        UserFile newFile = new UserFile();
 
-    //     // // Save the updated User to the database
-    //     // User savedUser = userService.saveUser(user);
-    //     // return ResponseEntity.ok(savedUser);
-    // }
+                        newFile.setName(file.getOriginalFilename());
+                        newFile.setType(file.getContentType());
+                        newFile.setSize(file.getSize());
+
+                        user.getFiles().add(newFile);
+                        userRepository.save(user);
+
+                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + newFile.getId();
+                        saveMultipartFileToLocalDisk(file, userFolderPath);
+
+                        
+                        return ResponseEntity.ok("File Created. " + newFile.getId());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                    }
+                } else {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
+                }
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+            
+        }
+    }
+
+    public void saveMultipartFileToLocalDisk(MultipartFile multipartFile, String destinationPath) throws IOException {
+        InputStream inputStream = multipartFile.getInputStream();
+        OutputStream outputStream = new FileOutputStream(new File(destinationPath));
+
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+        inputStream.close();
+        outputStream.close();
+    }
 
     private void deleteFolder(File folder) throws IOException {
         if (folder.isDirectory()) {
