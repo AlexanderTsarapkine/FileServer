@@ -16,10 +16,20 @@ public class UserFile {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
+    private long count;
+
     private LocalDate dateUploaded;
     private String name;
     private String type;
     private long size;
+
+    public long getCount() {
+        return this.count;
+    }
+
+    public void setCount(long count) {
+        this.count = count;
+    }
 
     public UserFile() {
         this.dateUploaded = LocalDate.now();

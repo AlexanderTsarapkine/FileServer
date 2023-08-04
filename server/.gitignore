@@ -34,4 +34,4 @@ build/
 
 ### Manual Additions ###
 metadata.db
-imageDb/*
+# DbStorage/*

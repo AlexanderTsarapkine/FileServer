@@ -142,7 +142,7 @@ public class UserController {
 
     @PostMapping("/users/uploadFile")
     public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
-            @RequestParam("file") MultipartFile file) {
+                                        @RequestParam("file") MultipartFile file) {
         if (!userRepository.existsByEmail(userDTO.getEmail())) {
             return ResponseEntity.notFound().build();
         } else {
@@ -152,21 +152,27 @@ public class UserController {
                 User user = userOptional.get();
                 if (user.getPassword().equals(userDTO.getPassword())) {
                     try {
-                        UserFile newFile = new UserFile();
+                        String originalFilename = file.getOriginalFilename();
+                        String fileNameWithoutExtension = getFileNameWithoutExtension(originalFilename);
+                        String fileExtension = getFileExtension(originalFilename);
 
-                        newFile.setName(file.getOriginalFilename());
+                        // Find the highest count of files with the same name
+                        long maxCount = user.getFiles().stream()
+                                .filter(userFile -> userFile.getName().startsWith(fileNameWithoutExtension))
+                                .map(UserFile::getCount)
+                                .max(Long::compare)
+                                .orElse(0L);
+
+                        UserFile newFile = new UserFile();
+                        newFile.setName(fileNameWithoutExtension);
                         newFile.setType(file.getContentType());
                         newFile.setSize(file.getSize());
+                        newFile.setCount(maxCount + 1);
 
                         user.getFiles().add(newFile);
-                        User savedUser = userRepository.save(user);
+                        userRepository.save(user);
 
-                        // Get the ID of the saved UserFile
-                        // maybe change or ensure things are saved in series?
-                        // maybe instead save by name?
-                        long savedFileId = savedUser.getFiles().get(savedUser.getFiles().size() - 1).getId();
-
-                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + savedFileId;
+                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + generateFileName(fileNameWithoutExtension,newFile.getCount()) + fileExtension;
                         saveMultipartFileToLocalDisk(file, userFolderPath);
 
                         return ResponseEntity.ok("File Created.");
@@ -180,8 +186,23 @@ public class UserController {
             } else {
                 return ResponseEntity.notFound().build();
             }
-
         }
+    }
+
+    // Helper method to generate the file name with count
+    private String generateFileName(String fileNameWithoutExtension, long count) {
+        return (count > 0) ? "(" + count + ")" + fileNameWithoutExtension : fileNameWithoutExtension;
+    }
+
+
+    private String getFileNameWithoutExtension(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        return (dotIndex == -1) ? fileName : fileName.substring(0, dotIndex);
+    }
+
+    private String getFileExtension(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        return (dotIndex == -1) ? "" : fileName.substring(dotIndex);
     }
 
     public void saveMultipartFileToLocalDisk(MultipartFile multipartFile, String destinationPath) throws IOException {
