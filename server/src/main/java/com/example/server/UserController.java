@@ -161,7 +161,7 @@ public class UserController {
                                 .filter(userFile -> userFile.getName().startsWith(fileNameWithoutExtension))
                                 .map(UserFile::getCount)
                                 .max(Long::compare)
-                                .orElse(0L);
+                                .orElse(-1L);
 
                         UserFile newFile = new UserFile();
                         newFile.setName(fileNameWithoutExtension);
@@ -172,7 +172,7 @@ public class UserController {
                         user.getFiles().add(newFile);
                         userRepository.save(user);
 
-                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + generateFileName(fileNameWithoutExtension,newFile.getCount()) + fileExtension;
+                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + generateFileName(fileNameWithoutExtension,maxCount+1) + fileExtension;
                         saveMultipartFileToLocalDisk(file, userFolderPath);
 
                         return ResponseEntity.ok("File Created.");
