@@ -10,22 +10,41 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.util.StreamUtils;
 
 @RestController
 public class UserController {
 
-    final String DbFolderPath = "./DbStorage/";
+    final String DbFolderPath = "./DbStorage";
+
+    private static final Map<String, String> contentTypeToExtension = new HashMap<>();
+    static {
+        contentTypeToExtension.put("image/png", ".png");
+        contentTypeToExtension.put("image/jpeg", ".jpeg");
+        contentTypeToExtension.put("video/quicktime", ".mov");
+        // Add more mappings for other content types as needed
+    }
 
     @Autowired
     private UserRepository userRepository;
@@ -140,7 +159,61 @@ public class UserController {
         }        
     }
 
-    @PostMapping("/users/uploadFile")
+    @GetMapping("/users/files")
+    public ResponseEntity<Resource> getFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
+        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOptional.get();
+        if (!user.getPassword().equals(userDTO.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ByteArrayResource(new byte[0]));
+        }
+
+        Optional<UserFile> fileOptional = user.getFiles().stream()
+                .filter(userFile -> userFile.getId() == fileId)
+                .findFirst();
+
+        if (fileOptional.isPresent()) {
+            UserFile userFile = fileOptional.get();
+            String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files";
+
+            String fileNamePrefix = userFile.getCount() > 0 ? "(" + userFile.getCount() + ")" : "";
+            String fileNameType = contentTypeToExtension.getOrDefault(userFile.getType(), "");
+            String filePath = userFolderPath + File.separator + fileNamePrefix + userFile.getName() + fileNameType;
+
+            File file = new File(filePath);
+            if (file.exists()) {
+                try (InputStream inputStream = new FileInputStream(file)) {
+       
+                    MimeType mimeType = MimeTypeUtils.parseMimeType(userFile.getType());
+                    MediaType mediaType = MediaType.parseMediaType(mimeType.toString());
+
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(mediaType);
+                    headers.setContentDispositionFormData("attachment", fileNamePrefix + userFile.getName() + fileNameType);
+
+                    return ResponseEntity.ok()
+                            .headers(headers)
+                            .body(new ByteArrayResource(StreamUtils.copyToByteArray(inputStream)));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                }
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/users/files")
     public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
                                         @RequestParam("file") MultipartFile file) {
         if (!userRepository.existsByEmail(userDTO.getEmail())) {

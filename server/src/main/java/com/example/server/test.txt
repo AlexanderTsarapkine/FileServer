@@ -1,5 +1,0 @@
-
-curl -X POST "http://localhost:8080/users/uploadFile" \
-  -H "Content-Type: multipart/form-data" \
-  -F "userDTO={\"email\":\"test@example.com\",\"password\":\"test123\"};type=application/json" \
-  -F "file=@/Users/alexandertsarapkine/Downloads/test.png"

@@ -31,8 +31,13 @@ public class User {
         files.add(file);
     }
 
-    public void removeFile(UserFile file) {
-        files.remove(file);
+    // make this also remove from sql????
+    public void removeFile(long id) {
+        for (UserFile file : this.getFiles()) {
+            if (file.getId() == id) {
+                files.remove(file);
+            }
+        }
     }
 
     public long getId() {
