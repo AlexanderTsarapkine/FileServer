@@ -15,6 +15,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +31,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
@@ -190,9 +194,7 @@ public class UserController {
             File file = new File(filePath);
             if (file.exists()) {
                 try (InputStream inputStream = new FileInputStream(file)) {
-       
-                    MimeType mimeType = MimeTypeUtils.parseMimeType(userFile.getType());
-                    MediaType mediaType = MediaType.parseMediaType(mimeType.toString());
+                    MediaType mediaType = getMediaTypeFromFile(file);
 
                     HttpHeaders headers = new HttpHeaders();
                     headers.setContentType(mediaType);
@@ -211,6 +213,11 @@ public class UserController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+    private MediaType getMediaTypeFromFile(File file) throws IOException {
+        Path path = Paths.get(file.toURI());
+        String contentType = Files.probeContentType(path);
+        return MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
     }
 
     @PostMapping("/users/files")
