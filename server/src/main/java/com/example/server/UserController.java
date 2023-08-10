@@ -24,18 +24,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.imageio.ImageIO;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
 import org.springframework.util.StreamUtils;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+
+import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.Java2DFrameConverter;
+
+import java.awt.image.BufferedImage;
+import org.imgscalr.Scalr;
+
+
 
 @RestController
 public class UserController {
@@ -236,7 +243,6 @@ public class UserController {
                         String fileNameWithoutExtension = getFileNameWithoutExtension(originalFilename);
                         String fileExtension = getFileExtension(originalFilename);
 
-                        // Find the highest count of files with the same name
                         long maxCount = user.getFiles().stream()
                                 .filter(userFile -> userFile.getName().startsWith(fileNameWithoutExtension))
                                 .map(UserFile::getCount)
@@ -252,8 +258,31 @@ public class UserController {
                         user.getFiles().add(newFile);
                         userRepository.save(user);
 
-                        String userFolderPath = DbFolderPath + File.separator + user.getId() + File.separator + "files" + File.separator + generateFileName(fileNameWithoutExtension,maxCount+1) + fileExtension;
+                        String userFolderPath = DbFolderPath + 
+                                                File.separator + 
+                                                user.getId() + 
+                                                File.separator + 
+                                                "files" + 
+                                                File.separator + 
+                                                generateFileName(fileNameWithoutExtension,maxCount+1) + 
+                                                fileExtension;
+
                         saveMultipartFileToLocalDisk(file, userFolderPath);
+
+                        String userPreviewPath = DbFolderPath + 
+                                                File.separator + 
+                                                user.getId() + 
+                                                File.separator + 
+                                                "previews" + 
+                                                File.separator + 
+                                                generateFileName(fileNameWithoutExtension, maxCount + 1) + 
+                                                fileExtension;
+
+                        if (file.getContentType().startsWith("image")) {
+                            resizeAndSaveImagePreview(userPreviewPath, file);
+                        } else if (file.getContentType().startsWith("video")) {
+                            extractVideoFrameAndSavePreview(userPreviewPath, file);
+                        }
 
                         return ResponseEntity.ok("File Created.");
                     } catch (IOException e) {
@@ -269,7 +298,68 @@ public class UserController {
         }
     }
 
-    // Helper method to generate the file name with count
+    private void resizeAndSaveImagePreview(String outputPath, MultipartFile file) throws IOException {
+        BufferedImage originalImage = ImageIO.read(file.getInputStream());
+        
+        BufferedImage resizedImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, 800, 600);
+        
+        Path outputDirectoryPath = Paths.get(outputPath).getParent();
+        if (!Files.exists(outputDirectoryPath)) {
+            Files.createDirectories(outputDirectoryPath);
+        }
+        
+        String formatName = file.getContentType().split("/")[1];
+        
+        ImageIO.write(resizedImage, formatName, new File(outputPath));
+    }
+
+    private void extractVideoFrameAndSavePreview(String outputPath, MultipartFile file) throws IOException {
+        try {
+            InputStream inputStream = file.getInputStream();
+            FFmpegFrameGrabber frameGrabber = new FFmpegFrameGrabber(inputStream);
+            frameGrabber.start();
+    
+            Frame frame;
+            if ((frame = frameGrabber.grabImage()) != null) {
+                Java2DFrameConverter converter = new Java2DFrameConverter();
+                BufferedImage bufferedImage = converter.convert(frame);
+                converter.close();
+                frameGrabber.close();
+
+                BufferedImage resizedImage = resizeImage(bufferedImage, 800, 600);
+
+                saveImageToFile(outputPath, resizedImage);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    
+    private BufferedImage resizeImage(BufferedImage originalImage, int width, int height) {
+        BufferedImage resizedImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, width, height);
+        return resizedImage;
+    }
+    
+    private void saveImageToFile(String outputPath, BufferedImage image) {
+        try {
+            String newOutputPath = outputPath.substring(0, outputPath.lastIndexOf(".")) + ".png";
+            File outputFile = new File(newOutputPath);
+    
+            File outputDirectory = outputFile.getParentFile();
+    
+            if (!outputDirectory.exists()) {
+                if (!outputDirectory.mkdirs()) {
+                    throw new IOException("Failed to create the directory");
+                }
+            }
+    
+            ImageIO.write(image, "png", outputFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private String generateFileName(String fileNameWithoutExtension, long count) {
         return (count > 0) ? "(" + count + ")" + fileNameWithoutExtension : fileNameWithoutExtension;
     }
