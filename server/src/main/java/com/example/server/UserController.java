@@ -19,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -258,6 +257,67 @@ public class UserController {
         Path path = Paths.get(file.toURI());
         String contentType = Files.probeContentType(path);
         return MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
+    }
+
+    @DeleteMapping("/users/files")
+    public ResponseEntity<?> deleteFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
+
+         if (!userRepository.existsByEmail(userDTO.getEmail())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOptional.get();
+        if (!user.getPassword().equals(userDTO.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ByteArrayResource(new byte[0]));
+        }
+
+        UserFile file = userRepository.findUserFileByEmailAndFileId(user.getEmail(), fileId);
+        
+        if (!userRepository.deleteUserFileByEmailAndFileId(user.getEmail(), fileId)){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found");
+        }
+
+        String fileNamePrefix = file.getCount() > 0 ? "(" + file.getCount() + ")" : "";
+        String fileNameType = contentTypeToExtension.getOrDefault(file.getType(), "");
+
+        String previewFilePath = DbFolderPath + 
+                                 File.separator + 
+                                 user.getId() + 
+                                 File.separator + 
+                                 "previews" + 
+                                 File.separator + 
+                                 fileNamePrefix +
+                                 file.getName() + 
+                                 ".png";
+
+        String filePath = DbFolderPath + 
+                          File.separator + 
+                          user.getId() + 
+                          File.separator + 
+                          "files" + 
+                          File.separator + 
+                          fileNamePrefix +
+                          file.getName() + 
+                          fileNameType;
+
+        if (!deleteFile(previewFilePath) || !deleteFile(filePath)) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting the file from db ");
+        }
+        
+        return ResponseEntity.ok("File Deleted Successfully");      
+    }
+
+    private boolean deleteFile(String filePath) {
+        File file = new File(filePath);
+        if (file.exists()) {
+            return file.delete();
+        }
+        return false;
     }
 
     @PostMapping("/users/files")
