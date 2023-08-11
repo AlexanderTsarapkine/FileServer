@@ -2,8 +2,6 @@ package com.example.server;
 
 import java.time.LocalDate;
 
-import org.springframework.web.multipart.MultipartFile;
-
 // outgoing for preview
 public class UserFilePreviewDTO {
 
@@ -11,7 +9,7 @@ public class UserFilePreviewDTO {
     private String name;
     private String type;
     private LocalDate dateUploaded;
-    // private MultipartFile filePreview;
+    private byte[] filePreview;
     private long size;
 
     public long getId() {
@@ -54,13 +52,13 @@ public class UserFilePreviewDTO {
         this.type = type;
     }
 
-    // public MultipartFile getFilePreview() {
-    //     return filePreview;
-    // }
+    public byte[] getFilePreview() {
+        return filePreview;
+    }
 
-    // public void setFilePreview(MultipartFile filePreview) {
-    //     this.filePreview = filePreview;
-    // }
+    public void setFilePreview(byte[] filePreview) {
+        this.filePreview = filePreview;
+    }
 
 }
 

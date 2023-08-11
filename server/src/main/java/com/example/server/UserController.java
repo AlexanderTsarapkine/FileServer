@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,28 +116,6 @@ public class UserController {
         }
     }
 
-    // NOT DONEEE
-    // Get user and all file previews associated with them
-    @GetMapping("/users/preview")
-    public ResponseEntity<?> getUserPreview(@RequestBody UserDTO userDTO) {
-        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            if(user.getPassword().equals(userDTO.getPassword())) {
-                UserDTO res = new UserDTO();
-                res.setEmail(user.getEmail());
-                res.setPassword(user.getPassword());
-                // iterate through all user files and get the file id along with date saved field and save to array
-
-                return ResponseEntity.ok(res);
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
-            }
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     // Delete user and all files associated with them
     @DeleteMapping("/users")
     public ResponseEntity<?> deleteUser(@RequestBody UserDTO userDTO) {
@@ -168,6 +147,60 @@ public class UserController {
             }
             
         }        
+    }
+
+    @GetMapping("/users/preview")
+    public ResponseEntity<?> getUserPreview(@RequestBody UserDTO userDTO) {
+        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+         User user = userOptional.get();
+        if (!user.getPassword().equals(userDTO.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ByteArrayResource(new byte[0]));
+        }
+
+        List<UserFilePreviewDTO> previewFiles = new ArrayList<>();
+
+        for (UserFile file : user.getFiles()) {
+            UserFilePreviewDTO preview = new UserFilePreviewDTO();
+            preview.setId(file.getId());
+            preview.setName(file.getName());
+            preview.setType(file.getType());
+            preview.setSize(file.getSize());
+            preview.setDateUploaded(file.getDateUploaded());
+
+            try {
+                String userPreviewPath = DbFolderPath + 
+                                                File.separator + 
+                                                user.getId() + 
+                                                File.separator + 
+                                                "previews" + 
+                                                File.separator + 
+                                                generateFileName(file.getName(), file.getCount()) + 
+                                                ".png";
+
+                preview.setFilePreview(readImageFileAsBytes(userPreviewPath));
+                previewFiles.add(preview);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return ResponseEntity.ok(previewFiles);
+    }
+
+    private byte[] readImageFileAsBytes(String filePath) throws IOException {
+        try (InputStream inputStream = new FileInputStream(filePath)) {
+            return inputStream.readAllBytes();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @GetMapping("/users/files")
@@ -301,7 +334,7 @@ public class UserController {
     private void resizeAndSaveImagePreview(String outputPath, MultipartFile file) throws IOException {
         BufferedImage originalImage = ImageIO.read(file.getInputStream());
         
-        BufferedImage resizedImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, 800, 600);
+        BufferedImage resizedImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, 192, 108);
         
         Path outputDirectoryPath = Paths.get(outputPath).getParent();
         if (!Files.exists(outputDirectoryPath)) {
@@ -326,7 +359,7 @@ public class UserController {
                 converter.close();
                 frameGrabber.close();
 
-                BufferedImage resizedImage = resizeImage(bufferedImage, 800, 600);
+                BufferedImage resizedImage = resizeImage(bufferedImage, 192, 108);
 
                 saveImageToFile(outputPath, resizedImage);
             }
