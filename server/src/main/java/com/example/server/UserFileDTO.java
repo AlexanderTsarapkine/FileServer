@@ -1,5 +1,6 @@
 package com.example.server;
 
+// not used
 public class UserFileDTO {
 
     private long id;

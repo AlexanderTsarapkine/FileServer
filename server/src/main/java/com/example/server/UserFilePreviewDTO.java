@@ -2,7 +2,6 @@ package com.example.server;
 
 import java.time.LocalDate;
 
-// outgoing for preview
 public class UserFilePreviewDTO {
 
     private long id;

@@ -7,8 +7,6 @@ import jakarta.persistence.Id;
 
 import java.time.LocalDate;
 
-// maybe in future add file sharing?
-
 @Entity
 public class UserFile {
 

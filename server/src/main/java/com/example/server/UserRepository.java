@@ -3,12 +3,12 @@ import java.util.Optional;
 
 import org.springframework.data.repository.CrudRepository;
 
-public interface UserRepository extends CrudRepository<User, Long> {
-    boolean existsByEmail(String email);
-    Optional<User> findByEmail(String email);
+public interface UserRepository extends CrudRepository<User, String> {
+    boolean existsById(String id);
+    Optional<User> findById(String id);
 
-    default UserFile findUserFileByEmailAndFileId(String email, long fileId) {
-        return findByEmail(email)
+    default UserFile findUserFileByUserIdAndFileId(String userId, long fileId) {
+        return findById(userId)
                 .map(user -> user.getFiles().stream()
                         .filter(file -> file.getId() == fileId)
                         .findFirst()
@@ -16,8 +16,8 @@ public interface UserRepository extends CrudRepository<User, Long> {
                 .orElse(null);
     }
 
-    default boolean deleteUserFileByEmailAndFileId(String email, long fileId) {
-        User user = findByEmail(email).orElse(null);
+    default boolean deleteUserFileByUserIdAndFileId(String userId, long fileId) {
+        User user = findById(userId).orElse(null);
         if (user == null) {
             return false;
         }

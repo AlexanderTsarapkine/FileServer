@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -18,7 +24,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +36,6 @@ import javax.imageio.ImageIO;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -42,8 +49,6 @@ import org.bytedeco.javacv.Java2DFrameConverter;
 import java.awt.image.BufferedImage;
 import org.imgscalr.Scalr;
 
-
-
 @RestController
 public class UserController {
 
@@ -54,23 +59,51 @@ public class UserController {
         contentTypeToExtension.put("image/png", ".png");
         contentTypeToExtension.put("image/jpeg", ".jpeg");
         contentTypeToExtension.put("video/quicktime", ".mov");
-        // Add more mappings for other content types as needed
     }
+
+    private static final String CLIENT_ID = "";
+    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 
     @Autowired
     private UserRepository userRepository;
 
+    private GoogleIdToken.Payload verifyJwtToken(String accessToken) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), JSON_FACTORY)
+                    .setAudience(Collections.singletonList(CLIENT_ID))
+                    .build();
+
+            System.out.println(accessToken);
+            GoogleIdToken idToken = verifier.verify(accessToken);
+
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+
+                return payload;
+            } else {
+                return null;
+            }
+        } catch (GeneralSecurityException | IOException e) {
+            return  null;
+        }
+    }
+
     // Create User
     @PostMapping("/users")
-    public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
-        if (userRepository.existsByEmail(userDTO.getEmail())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists.");
+     public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
+
+        if (userRepository.existsById(oauthUser.getSubject())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exists.");
         }
 
         User user = new User();
 
-        user.setEmail(userDTO.getEmail());
-        user.setPassword(userDTO.getPassword());
+        user.setEmail(oauthUser.getEmail());
+        user.setId(oauthUser.getSubject());
 
         // Create User Directory
         User savedUser = userRepository.save(user);
@@ -87,29 +120,30 @@ public class UserController {
     }
 
     // Remove eventually
-    @GetMapping("/users/all")
-    public ResponseEntity<List<User>> getUsers() {
-        Iterable<User> usersIterable = userRepository.findAll();
-        List<User> users = new ArrayList<>();
-        for (User user : usersIterable) {
-            users.add(user);
-        }
-        return ResponseEntity.ok(users);
-    }
+    // @GetMapping("/users/all")
+    // public ResponseEntity<List<User>> getUsers() {
+    //     Iterable<User> usersIterable = userRepository.findAll();
+    //     List<User> users = new ArrayList<>();
+    //     for (User user : usersIterable) {
+    //         users.add(user);
+    //     }
+    //     return ResponseEntity.ok(users);
+    // }
 
     // Get user and all files associated with them
     @GetMapping("/users")
     public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
-        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
+
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            if(user.getPassword().equals(userDTO.getPassword())) {
-                // maybe return UserDTO?
-                return ResponseEntity.ok(user);
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
-            }
+            return ResponseEntity.ok(user);
+
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -118,29 +152,31 @@ public class UserController {
     // Delete user and all files associated with them
     @DeleteMapping("/users")
     public ResponseEntity<?> deleteUser(@RequestBody UserDTO userDTO) {
-        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
+
+        if (!userRepository.existsById(oauthUser.getSubject())) {
             return ResponseEntity.notFound().build();
         } else {
-            Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+            Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
             
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                if(user.getPassword().equals(userDTO.getPassword())) {
-                    String userFolderPath = DbFolderPath + File.separator + user.getId();
-                    File userFolder = new File(userFolderPath);
-                    if (userFolder.exists()) {
-                        try {
-                            deleteFolder(userFolder);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-                        }
+                String userFolderPath = DbFolderPath + File.separator + user.getId();
+                File userFolder = new File(userFolderPath);
+                if (userFolder.exists()) {
+                    try {
+                        deleteFolder(userFolder);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
                     }
-                    userRepository.deleteById(user.getId());
-                    return ResponseEntity.ok("User deleted successfully.");
-                } else {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
                 }
+                userRepository.deleteById(user.getId());
+                return ResponseEntity.ok("User deleted successfully.");
+
             } else {
                 return ResponseEntity.notFound().build();
             }
@@ -148,21 +184,24 @@ public class UserController {
         }        
     }
 
+    // Get all previews from a user
     @GetMapping("/users/preview")
     public ResponseEntity<?> getUserPreview(@RequestBody UserDTO userDTO) {
-        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
+
+        if (!userRepository.existsById(oauthUser.getSubject())) {
             return ResponseEntity.notFound().build();
         }
 
-        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
          User user = userOptional.get();
-        if (!user.getPassword().equals(userDTO.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ByteArrayResource(new byte[0]));
-        }
 
         List<UserFilePreviewDTO> previewFiles = new ArrayList<>();
 
@@ -202,21 +241,24 @@ public class UserController {
         }
     }
 
+    // Get file by file id
     @GetMapping("/users/files")
-    public ResponseEntity<Resource> getFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
-        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+    public ResponseEntity<?> getFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
+
+        if (!userRepository.existsById(oauthUser.getSubject())) {
             return ResponseEntity.notFound().build();
         }
 
-        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         User user = userOptional.get();
-        if (!user.getPassword().equals(userDTO.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ByteArrayResource(new byte[0]));
-        }
 
         Optional<UserFile> fileOptional = user.getFiles().stream()
                 .filter(userFile -> userFile.getId() == fileId)
@@ -259,26 +301,28 @@ public class UserController {
         return MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
     }
 
+    // delete file by file id
     @DeleteMapping("/users/files")
     public ResponseEntity<?> deleteFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
 
-         if (!userRepository.existsByEmail(userDTO.getEmail())) {
+         if (!userRepository.existsById(oauthUser.getSubject())) {
             return ResponseEntity.notFound().build();
         }
 
-        Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         User user = userOptional.get();
-        if (!user.getPassword().equals(userDTO.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ByteArrayResource(new byte[0]));
-        }
 
-        UserFile file = userRepository.findUserFileByEmailAndFileId(user.getEmail(), fileId);
-        
-        if (!userRepository.deleteUserFileByEmailAndFileId(user.getEmail(), fileId)){
+        UserFile file = userRepository.findUserFileByUserIdAndFileId(user.getId(), fileId);
+         
+        if (!userRepository.deleteUserFileByUserIdAndFileId(user.getId(), fileId)){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found");
         }
 
@@ -320,70 +364,73 @@ public class UserController {
         return false;
     }
 
+    // upload file
     @PostMapping("/users/files")
     public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
                                         @RequestParam("file") MultipartFile file) {
-        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+        
+        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        if(oauthUser == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+        }
+
+        if (!userRepository.existsById(oauthUser.getSubject())) {
             return ResponseEntity.notFound().build();
         } else {
-            Optional<User> userOptional = userRepository.findByEmail(userDTO.getEmail());
+            Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
 
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                if (user.getPassword().equals(userDTO.getPassword())) {
-                    try {
-                        String originalFilename = file.getOriginalFilename();
-                        String fileNameWithoutExtension = getFileNameWithoutExtension(originalFilename);
-                        String fileExtension = getFileExtension(originalFilename);
+                try {
+                    String originalFilename = file.getOriginalFilename();
+                    String fileNameWithoutExtension = getFileNameWithoutExtension(originalFilename);
+                    String fileExtension = getFileExtension(originalFilename);
 
-                        long maxCount = user.getFiles().stream()
-                                .filter(userFile -> userFile.getName().startsWith(fileNameWithoutExtension))
-                                .map(UserFile::getCount)
-                                .max(Long::compare)
-                                .orElse(-1L);
+                    long maxCount = user.getFiles().stream()
+                            .filter(userFile -> userFile.getName().startsWith(fileNameWithoutExtension))
+                            .map(UserFile::getCount)
+                            .max(Long::compare)
+                            .orElse(-1L);
 
-                        UserFile newFile = new UserFile();
-                        newFile.setName(fileNameWithoutExtension);
-                        newFile.setType(file.getContentType());
-                        newFile.setSize(file.getSize());
-                        newFile.setCount(maxCount + 1);
+                    UserFile newFile = new UserFile();
+                    newFile.setName(fileNameWithoutExtension);
+                    newFile.setType(file.getContentType());
+                    newFile.setSize(file.getSize());
+                    newFile.setCount(maxCount + 1);
 
-                        user.getFiles().add(newFile);
-                        userRepository.save(user);
+                    user.getFiles().add(newFile);
+                    userRepository.save(user);
 
-                        String userFolderPath = DbFolderPath + 
-                                                File.separator + 
-                                                user.getId() + 
-                                                File.separator + 
-                                                "files" + 
-                                                File.separator + 
-                                                generateFileName(fileNameWithoutExtension,maxCount+1) + 
-                                                fileExtension;
+                    String userFolderPath = DbFolderPath + 
+                                            File.separator + 
+                                            user.getId() + 
+                                            File.separator + 
+                                            "files" + 
+                                            File.separator + 
+                                            generateFileName(fileNameWithoutExtension,maxCount+1) + 
+                                            fileExtension;
 
-                        saveMultipartFileToLocalDisk(file, userFolderPath);
+                    saveMultipartFileToLocalDisk(file, userFolderPath);
 
-                        String userPreviewPath = DbFolderPath + 
-                                                File.separator + 
-                                                user.getId() + 
-                                                File.separator + 
-                                                "previews" + 
-                                                File.separator + 
-                                                generateFileName(fileNameWithoutExtension, maxCount + 1) + 
-                                                fileExtension;
+                    String userPreviewPath = DbFolderPath + 
+                                            File.separator + 
+                                            user.getId() + 
+                                            File.separator + 
+                                            "previews" + 
+                                            File.separator + 
+                                            generateFileName(fileNameWithoutExtension, maxCount + 1) + 
+                                            fileExtension;
 
-                        if (file.getContentType().startsWith("image")) {
-                            resizeAndSaveImagePreview(userPreviewPath, file);
-                        } else if (file.getContentType().startsWith("video")) {
-                            extractVideoFrameAndSavePreview(userPreviewPath, file);
-                        }
-
-                        return ResponseEntity.ok("File Created.");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                    if (file.getContentType().startsWith("image")) {
+                        resizeAndSaveImagePreview(userPreviewPath, file);
+                    } else if (file.getContentType().startsWith("video")) {
+                        extractVideoFrameAndSavePreview(userPreviewPath, file);
                     }
-                } else {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
+
+                    return ResponseEntity.ok("File Created.");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
                 }
             } else {
                 return ResponseEntity.notFound().build();
@@ -468,7 +515,7 @@ public class UserController {
         return (dotIndex == -1) ? "" : fileName.substring(dotIndex);
     }
 
-    public void saveMultipartFileToLocalDisk(MultipartFile multipartFile, String destinationPath) throws IOException {
+    private void saveMultipartFileToLocalDisk(MultipartFile multipartFile, String destinationPath) throws IOException {
         InputStream inputStream = multipartFile.getInputStream();
         OutputStream outputStream = new FileOutputStream(new File(destinationPath));
 
