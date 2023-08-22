@@ -1,37 +1,24 @@
-import './App.css';
-import Login from "./components/login";
-import Logout from "./components/logout";
-import { useEffect } from 'react';
-import {gapi} from 'gapi-script';
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+import Home from './pages/Home';
+import StorageInterface from './pages/StorageInterface';
 
 const clientId = process.env.REACT_APP_CLIENT_ID;
 
 function App() {
-
-  useEffect(() => {
-    async function start() {
-      await gapi.client.init({
-        clientId: clientId,
-        scope: "openid email profile"
-      });
-
-      const authInstance = gapi.auth2.getAuthInstance();
-      const user = authInstance.currentUser.get();
-      const authResponse = user.getAuthResponse();
-
-      const idToken = authResponse.id_token;
-      console.log("ID token?:");
-      console.log(idToken);
-    }
-
-    gapi.load('client:auth2', start);
-  }, []);
+  const [oauthToken, setToken] = useState(null); // consider secure state management or cookie storage
 
   return (
-    <div className="App">
-      <Login/>
-      <Logout/>
-    </div>
+    <GoogleOAuthProvider clientId={clientId}> 
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home setToken={setToken}/>}/>
+          <Route path="/MyData" element={<StorageInterface oauthToken={oauthToken}/>}/>
+        </Routes>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }
 

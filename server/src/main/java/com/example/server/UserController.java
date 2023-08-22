@@ -7,13 +7,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,9 +20,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,49 +55,68 @@ public class UserController {
         contentTypeToExtension.put("video/quicktime", ".mov");
     }
 
-    private static final String CLIENT_ID = "";
-    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-
     @Autowired
     private UserRepository userRepository;
 
-    private GoogleIdToken.Payload verifyJwtToken(String accessToken) {
+    private final String TOKEN_INFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo?access_token=";
+
+    public OAuthUser verifyJwtToken(String accessToken) {
+        RestTemplate restTemplate = new RestTemplate();
+    
+        String userInfoUrl = TOKEN_INFO_ENDPOINT + accessToken;
+    
         try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), JSON_FACTORY)
-                    .setAudience(Collections.singletonList(CLIENT_ID))
-                    .build();
-
-            System.out.println(accessToken);
-            GoogleIdToken idToken = verifier.verify(accessToken);
-
-            if (idToken != null) {
-                GoogleIdToken.Payload payload = idToken.getPayload();
-
-                return payload;
+            ResponseEntity<OAuthUser> response = restTemplate.getForEntity(userInfoUrl, OAuthUser.class);
+    
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody();
             } else {
+                System.out.println("Request failed with status code: " + response.getStatusCode());
                 return null;
             }
-        } catch (GeneralSecurityException | IOException e) {
-            return  null;
+        } catch (HttpClientErrorException.Unauthorized unauthorizedException) {
+            System.out.println("Token verification failed: Unauthorized");
+            return null;
+        } catch (Exception e) {
+            System.out.println("Error while verifying JWT token: " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyToken(@RequestBody Map<String, String> requestBody) {
+        String accessToken = requestBody.get("access_token");
+        System.out.println(accessToken);
+        if (accessToken == null || accessToken.isBlank()) {
+            return ResponseEntity.badRequest().body("Access token is missing or invalid");
+        }
+    
+        OAuthUser payload = verifyJwtToken(accessToken);
+    
+        if (payload == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token out of date or invalid");
+        }
+    
+        return ResponseEntity.ok(payload);
     }
 
     // Create User
     @PostMapping("/users")
      public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-        if (userRepository.existsById(oauthUser.getSubject())) {
+        if (userRepository.existsById(oauthUser.getSub())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exists.");
         }
 
         User user = new User();
 
         user.setEmail(oauthUser.getEmail());
-        user.setId(oauthUser.getSubject());
+        user.setId(oauthUser.getSub());
 
         // Create User Directory
         User savedUser = userRepository.save(user);
@@ -133,12 +146,12 @@ public class UserController {
     // Get user and all files associated with them
     @GetMapping("/users")
     public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
@@ -152,15 +165,15 @@ public class UserController {
     // Delete user and all files associated with them
     @DeleteMapping("/users")
     public ResponseEntity<?> deleteUser(@RequestBody UserDTO userDTO) {
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-        if (!userRepository.existsById(oauthUser.getSubject())) {
+        if (!userRepository.existsById(oauthUser.getSub())) {
             return ResponseEntity.notFound().build();
         } else {
-            Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
+            Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
             
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
@@ -187,16 +200,16 @@ public class UserController {
     // Get all previews from a user
     @GetMapping("/users/preview")
     public ResponseEntity<?> getUserPreview(@RequestBody UserDTO userDTO) {
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-        if (!userRepository.existsById(oauthUser.getSubject())) {
+        if (!userRepository.existsById(oauthUser.getSub())) {
             return ResponseEntity.notFound().build();
         }
 
-        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -244,16 +257,16 @@ public class UserController {
     // Get file by file id
     @GetMapping("/users/files")
     public ResponseEntity<?> getFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-        if (!userRepository.existsById(oauthUser.getSubject())) {
+        if (!userRepository.existsById(oauthUser.getSub())) {
             return ResponseEntity.notFound().build();
         }
 
-        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -304,16 +317,16 @@ public class UserController {
     // delete file by file id
     @DeleteMapping("/users/files")
     public ResponseEntity<?> deleteFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-         if (!userRepository.existsById(oauthUser.getSubject())) {
+         if (!userRepository.existsById(oauthUser.getSub())) {
             return ResponseEntity.notFound().build();
         }
 
-        Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
+        Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -369,15 +382,15 @@ public class UserController {
     public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
                                         @RequestParam("file") MultipartFile file) {
         
-        GoogleIdToken.Payload oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }
 
-        if (!userRepository.existsById(oauthUser.getSubject())) {
+        if (!userRepository.existsById(oauthUser.getSub())) {
             return ResponseEntity.notFound().build();
         } else {
-            Optional<User> userOptional = userRepository.findById(oauthUser.getSubject());
+            Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
 
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
