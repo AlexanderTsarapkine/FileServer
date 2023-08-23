@@ -50,10 +50,105 @@ button {
 
 button:hover {
   color: #fff;
-      background-color: #0b5ed7;
-      border-color: #0a58ca;
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+button.disabled, button.disabled:hover{
+  background-color: #2f80f978;
+  border-color: #8dbbffa9;
+  cursor: default;
 }
 
 button.sign-in-button {
   width: 15rem;
+}
+
+.FilePreview {
+  display: flex;
+  flex-direction: column;
+  justify-content: top;
+  align-items: center;
+  width: 12rem;
+  height: 9rem;
+  font-size: 0.75rem;
+  padding: 0;
+}
+.FilePreview img {
+  max-width: 12rem;
+  max-height: 8rem;
+}
+
+.FilePreview p, .FilePreview h4 {
+  margin: 0;
+  text-align: center;
+}
+
+.StorageInterface {
+  display: flex;
+}
+
+.FilePreviewContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 2rem;
+  flex: 1;
+  align-content: flex-start;
+}
+
+.FileDashboard {
+  width: 18rem;
+  height: 100vh;
+  overflow: hidden;
+  position: sticky;
+  top: 0;
+  background-color: #FEFCDD;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.FileDashboard h1 {
+  margin: 1.5rem;
+  color: #FE7600;
+}
+
+button.dashboard-button {
+  width: stretch;
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+button.sign-out-button {
+  width: stretch;
+  margin: 1.5rem;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+}
+
+.profile-info img {
+  width: 40px;
+  height: 40px;
+  margin-left: 1.5rem;
+  margin-right: 0.75rem;
+  border-radius: 10%;
+  object-fit: cover;
+
+}
+
+.profile-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name p {
+  margin: 0px;
+  /* color: #FE7600; */
+  /* font-weight: bold; */
+  /* font-family: monospace; */
 }

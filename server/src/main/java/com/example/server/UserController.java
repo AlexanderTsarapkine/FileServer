@@ -1,5 +1,6 @@
 package com.example.server;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,7 +47,9 @@ import org.imgscalr.Scalr;
 @RestController
 public class UserController {
 
-    final String DbFolderPath = "./DbStorage";
+
+    private final String frontendEndpoint = "http://localhost:3000";
+    private final String DbFolderPath = "./DbStorage";
 
     private static final Map<String, String> contentTypeToExtension = new HashMap<>();
     static {
@@ -85,6 +88,7 @@ public class UserController {
     }
 
     @PostMapping("/verify")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> verifyToken(@RequestBody Map<String, String> requestBody) {
         String accessToken = requestBody.get("access_token");
         System.out.println(accessToken);
@@ -103,7 +107,8 @@ public class UserController {
 
     // Create User
     @PostMapping("/users")
-     public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
+    @CrossOrigin(origins = frontendEndpoint)
+    public ResponseEntity<?> createUser(@RequestBody UserDTO userDTO) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
@@ -145,6 +150,7 @@ public class UserController {
 
     // Get user and all files associated with them
     @GetMapping("/users")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
@@ -164,6 +170,7 @@ public class UserController {
 
     // Delete user and all files associated with them
     @DeleteMapping("/users")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> deleteUser(@RequestBody UserDTO userDTO) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
@@ -198,7 +205,8 @@ public class UserController {
     }
 
     // Get all previews from a user
-    @GetMapping("/users/preview")
+    @PostMapping("/users/preview")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> getUserPreview(@RequestBody UserDTO userDTO) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
@@ -256,6 +264,7 @@ public class UserController {
 
     // Get file by file id
     @GetMapping("/users/files")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> getFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
@@ -316,6 +325,7 @@ public class UserController {
 
     // delete file by file id
     @DeleteMapping("/users/files")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> deleteFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
         if(oauthUser == null) {
@@ -379,6 +389,7 @@ public class UserController {
 
     // upload file
     @PostMapping("/users/files")
+    @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
                                         @RequestParam("file") MultipartFile file) {
         

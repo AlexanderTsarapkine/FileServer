@@ -5,12 +5,12 @@ import '../assets/styles.css';
 
 import { useGoogleLogin } from '@react-oauth/google';
 
-const Home = ({setToken}) => {
+const Home = ({setOauthUser}) => {
     const  navigate = useNavigate();
 
     const login = useGoogleLogin({
         onSuccess: tokenResponse => {
-            setToken(tokenResponse.access_token);
+            setOauthUser(tokenResponse);
             navigate('/MyData', {replace: true}); 
         },
       });
