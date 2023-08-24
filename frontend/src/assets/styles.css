@@ -173,3 +173,13 @@ p.files-selected {
   margin-left: 1.5rem;
   color: #FE7600;
 }
+
+.uploadModal{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  background-color: white;
+  border: 2px solid #000;
+}

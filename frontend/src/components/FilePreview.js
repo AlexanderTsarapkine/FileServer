@@ -13,7 +13,7 @@ const FilePreview = ({previewObj, selected, setSelected}) => {
         } else {
             setSelected(selected.filter(obj => obj.id !== previewObj.id));
         }
-    }, [isSelected]);
+    }, [isSelected, setSelected, previewObj]);
    
     return (
         <div className={`FilePreview ${isSelected && "selected"}`} onClick={()=>setIsSelected(!isSelected)}>

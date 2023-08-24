@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -10,6 +10,9 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
     const [selected, setSelected] = useState([]);
     
     const  navigate = useNavigate();
+
+    
+
 
     function downloadSelected() {
         const mimeTypeExtensions = {
@@ -54,39 +57,59 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
 
     function deleteSelected() {
         selected.forEach(selection => {
-
-        });
-    }
-
-    useEffect(() => {
-        function getPreview() {
             const headers = {
                 'Content-Type': 'application/json',
             };
     
-            console.log("Sending preview request...");
-            axios.post("http://localhost:8080/users/preview", { token: oauthUser.access_token }, { headers })
+            const requestBody = {
+                token: oauthUser.access_token,
+            };
+    
+            axios.delete(`http://localhost:8080/users/files?id=${selection.id}`, {
+                data: requestBody,
+                headers,
+                responseType: 'blob'
+            })
+            .then(response => {
+               console.log("deleted");
+               setSelected(selected.filter(obj => obj.id !== selection.id));
+               getPreview();
+            })
+            .catch(error => {
+                console.error('Error deleting file:', error);
+                setOauthUser(null);
+            });
+        });
+    }
+    
+    const getPreview = useCallback(() => {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        console.log("Sending preview request...");
+        axios.post("http://localhost:8080/users/preview", { token: oauthUser.access_token }, { headers })
             .then(response => {
                 console.log('Response:', response.data);
-                setUserPreviews(response.data)
+                setUserPreviews(response.data);
             })
             .catch(error => {
                 console.error('Error retrieving preview:', error);
                 setUserPreviews(null);
             });
-        }
+    }, [oauthUser.access_token]);
 
+    useEffect(() => {
         if (oauthUser) {
-            console.log(oauthUser);
-            getPreview(); // make it create an account if no user
+            getPreview();
         } else {
-            navigate('/', {replace: true});  
+            navigate('/', { replace: true });
         }
-    }, [oauthUser, navigate]);
+    }, [oauthUser, navigate, getPreview]);
 
     return (
         <div className="StorageInterface">
-            <FileDashboard setOauthUser={setOauthUser} oauthUser={oauthUser} selected={selected} downloadSelected={downloadSelected} deleteSelected={deleteSelected}/>
+            <FileDashboard setOauthUser={setOauthUser} oauthUser={oauthUser} selected={selected} downloadSelected={downloadSelected} deleteSelected={deleteSelected} getPreview={getPreview}/>
             <div className="FilePreviewContainer">
                 {userPreviews && userPreviews.length === 0 && 
                     <h3>Try uploading some photos and images!</h3>
