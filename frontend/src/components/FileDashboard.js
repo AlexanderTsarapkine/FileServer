@@ -5,11 +5,9 @@ import { googleLogout } from '@react-oauth/google';
 
 // const serverUrl = process.env.REACT_SERVER_BASE_URL;
 
-const FileDashboard= ({setOauthUser, oauthUser}) => {
+const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, deleteSelected}) => {
 
     const [userProfile, setUserProfile] = useState(null);
-
-    
 
     function logout() {
         googleLogout();
@@ -30,23 +28,23 @@ const FileDashboard= ({setOauthUser, oauthUser}) => {
             })
             .catch(error => {
                 console.error('Error retrieving profile:', error);
-                // setOauthUser(null);
+                setOauthUser(null);
             });
         }
 
         if (oauthUser) {
             getProfile();
-        }
-    }, [oauthUser]);
-
+        } // else logout()?
+    }, [oauthUser, setOauthUser]);
 
     return (
         <div className="FileDashboard">
             <div>
                 <h1>Your Files</h1>
-                <button className="dashboard-button disabled" id="download">Download</button>
+                <button className={`dashboard-button ${selected.length == 0 && "disabled"}`} id="download" onClick={()=>downloadSelected()}>Download</button>
                 <button className="dashboard-button" id="upload">Upload</button>
-                <button className="dashboard-button" id="delete">Delete</button>
+                <button className={`dashboard-button ${selected.length == 0 && "disabled"}`} id="delete" onClick={()=>deleteSelected()}>Delete</button>
+                <p className="files-selected">{selected.length} Files Selected</p>
             </div>
             <div>
                 {userProfile &&
@@ -59,7 +57,7 @@ const FileDashboard= ({setOauthUser, oauthUser}) => {
                     </div>  
                 }
                 
-                <button className="sign-out-button"  onClick={() => logout()}>Sign Out</button>
+                <button className="sign-out-button"  onClick={()=>logout()}>Sign Out</button>
             </div>
            
         </div>

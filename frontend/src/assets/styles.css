@@ -72,11 +72,27 @@ button.sign-in-button {
   width: 12rem;
   height: 9rem;
   font-size: 0.75rem;
-  padding: 0;
+  padding: 0.75rem;
+  background-color: #f4f4f4;
+  border-radius: 5px;
 }
+
+.FilePreview:hover {
+  background-color: #ededed;
+}
+
+.FilePreview.selected{
+  background-color: #c0d7fa;
+}
+
+.FilePreview.selected:hover {
+  background-color: #c9dcf7;
+}
+
 .FilePreview img {
   max-width: 12rem;
   max-height: 8rem;
+  margin-top: 0.4rem;
 }
 
 .FilePreview p, .FilePreview h4 {
@@ -151,4 +167,9 @@ button.sign-out-button {
   /* color: #FE7600; */
   /* font-weight: bold; */
   /* font-family: monospace; */
+}
+
+p.files-selected {
+  margin-left: 1.5rem;
+  color: #FE7600;
 }

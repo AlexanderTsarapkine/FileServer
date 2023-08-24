@@ -263,7 +263,7 @@ public class UserController {
     }
 
     // Get file by file id
-    @GetMapping("/users/files")
+    @PostMapping("/users/files/download")
     @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> getFile(@RequestBody UserDTO userDTO, @RequestParam("id") long fileId) {
         OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
@@ -388,7 +388,7 @@ public class UserController {
     }
 
     // upload file
-    @PostMapping("/users/files")
+    @PostMapping("/users/files/upload")
     @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
                                         @RequestParam("file") MultipartFile file) {
