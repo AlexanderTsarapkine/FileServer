@@ -24,7 +24,7 @@ const UploadModal = ({ oauthUser, handleClose, getPreview }) => {
                     },
                 });
     
-                console.log('Upload successful:', response.data);
+                console.log('Upload successful');
                 handleClose();
                 getPreview();
             } catch (error) {

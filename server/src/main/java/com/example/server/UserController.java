@@ -91,7 +91,6 @@ public class UserController {
     @CrossOrigin(origins = frontendEndpoint)
     public ResponseEntity<?> verifyToken(@RequestBody Map<String, String> requestBody) {
         String accessToken = requestBody.get("access_token");
-        System.out.println(accessToken);
         if (accessToken == null || accessToken.isBlank()) {
             return ResponseEntity.badRequest().body("Access token is missing or invalid");
         }
@@ -390,10 +389,10 @@ public class UserController {
     // upload file
     @PostMapping("/users/files/upload")
     @CrossOrigin(origins = frontendEndpoint)
-    public ResponseEntity<?> uploadFile(@RequestPart("userDTO") UserDTO userDTO,
+    public ResponseEntity<?> uploadFile(@RequestParam("token") String token,
                                         @RequestParam("file") MultipartFile file) {
         
-        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
+        OAuthUser oauthUser = verifyJwtToken(token);
         if(oauthUser == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
         }

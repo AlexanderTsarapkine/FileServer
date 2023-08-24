@@ -73,6 +73,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
             .then(response => {
                console.log("deleted");
                setSelected(selected.filter(obj => obj.id !== selection.id));
+               console.log(selected.length)
                getPreview();
             })
             .catch(error => {
@@ -90,7 +91,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
         console.log("Sending preview request...");
         axios.post("http://localhost:8080/users/preview", { token: oauthUser.access_token }, { headers })
             .then(response => {
-                console.log('Response:', response.data);
+                console.log('Preview recieved');
                 setUserPreviews(response.data);
             })
             .catch(error => {

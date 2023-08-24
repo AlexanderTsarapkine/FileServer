@@ -4,9 +4,6 @@ import { googleLogout } from '@react-oauth/google';
 import UploadModal from './UploadModal';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-
-
 
 // const serverUrl = process.env.REACT_SERVER_BASE_URL;
 
@@ -32,7 +29,7 @@ const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, dele
             console.log("Sending profile request...");
             axios.post("http://localhost:8080/verify", { access_token: oauthUser.access_token }, { headers })
             .then(response => {
-                console.log('Response:', response.data);
+                console.log("Profile Recieved");
                 setUserProfile(response.data);
             })
             .catch(error => {
