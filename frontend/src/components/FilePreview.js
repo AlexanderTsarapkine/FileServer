@@ -14,10 +14,15 @@ const FilePreview = ({previewObj, selected, setSelected}) => {
             setSelected(selected.filter(obj => obj.id !== previewObj.id));
         }
     }, [isSelected, setSelected, previewObj]);
+
+    useEffect(()=> {
+        if(selected.length === 0) {
+            setIsSelected(false);
+        }
+    }, [selected]);
    
     return (
-        <div className={`FilePreview ${isSelected && "selected"}`} onClick={()=>setIsSelected(!isSelected)}>
-            
+        <div className={`FilePreview ${isSelected && "selected"}`} onClick={()=>setIsSelected(!isSelected)} key={previewObj.id}>
             {/* <h4>{previewObj.name}</h4>
             <p>{previewObj.dateUploaded}</p> */}
             <h4>{previewObj.type}</h4>

@@ -11,9 +11,6 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
     
     const  navigate = useNavigate();
 
-    
-
-
     function downloadSelected() {
         const mimeTypeExtensions = {
             'image/png': 'png',
@@ -55,6 +52,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
     }
     
 
+    // might need to add something to slow down deletes; causes sqlite to overload;
     function deleteSelected() {
         selected.forEach(selection => {
             const headers = {
@@ -71,16 +69,16 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
                 responseType: 'blob'
             })
             .then(response => {
-               console.log("deleted");
-               setSelected(selected.filter(obj => obj.id !== selection.id));
-               console.log(selected.length)
-               getPreview();
+                console.log("deleted");
             })
             .catch(error => {
                 console.error('Error deleting file:', error);
                 setOauthUser(null);
             });
         });
+    
+        setSelected([]);
+        getPreview();
     }
     
     const getPreview = useCallback(() => {
@@ -100,6 +98,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
             });
     }, [oauthUser.access_token]);
 
+    // add a create user if first preview call doesnt work
     useEffect(() => {
         if (oauthUser) {
             getPreview();

@@ -8,7 +8,7 @@ import StorageInterface from './pages/StorageInterface';
 const clientId = process.env.REACT_APP_CLIENT_ID;
 
 function App() {
-  const [oauthUser, setOauthUser] = useState(null); // consider secure state management or cookie storage
+  const [oauthUser, setOauthUser] = useState({}); // consider secure state management or cookie storage
 
   return (
     <GoogleOAuthProvider clientId={clientId}> 
