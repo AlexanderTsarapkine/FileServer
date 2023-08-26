@@ -24,7 +24,9 @@ const Home = ({setOauthUser}) => {
     return (
         <div className="split-login">
             <div className="intro-container">
-                <ReactTyped strings={introText} typeSpeed={75} backDelay={1500} loop />
+                <div className="intro-text">
+                    <ReactTyped strings={introText} typeSpeed={75} backDelay={1500} loop />
+                </div>
             </div>
             <div className="login-container">
                 <h1>Start Storing</h1>

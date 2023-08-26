@@ -30,6 +30,10 @@
   font-family: monospace;
 }
 
+.intro-container .intro-text {
+  margin: 1.5rem;
+}
+
 button {
   cursor: pointer;
   outline: 0;
@@ -184,7 +188,7 @@ p.files-selected {
   border-radius: 8px;
 }
 
-@media only screen and (max-width: 600px) {
+@media only screen and (max-width: 750px) {
   .FileDashboard {
     width: 12rem;
   }
@@ -205,5 +209,50 @@ p.files-selected {
     max-width: 8rem;
     max-height: 5rem;
   }
-  
+
+  .split-login {
+    flex-direction: column;
+  }
+}
+
+@media only screen and (max-height: 400px) {
+  .FileDashboard {
+    width: 12rem;
+  }
+
+  .FilePreviewContainer {
+    gap: 0.5rem;
+    margin: 1rem;
+    flex: 1;
+    align-content: flex-start;
+  }
+
+  .FilePreview {
+    width: 8rem;
+    height: 5rem;
+  }
+
+  .FilePreview img {
+    max-width: 8rem;
+    max-height: 5rem;
+  }
+
+  .profile-info {
+    display: none;
+  }
+
+  button, button.dashboard-button, button.sign-out-button{
+    margin-bottom: 0.2rem;
+    margin-top: 0.2rem;
+  }
+}
+
+@media only screen and (max-width: 400px) {
+  button {
+    font-size: 0.8rem;
+  }
+  .profile-name p {
+    display: none;
+  }
+
 }
