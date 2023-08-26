@@ -8,6 +8,8 @@ import FileDashboard from '../components/FileDashboard';
 const StorageInterface = ({setOauthUser, oauthUser}) => {
     const [userPreviews, setUserPreviews] = useState(null);
     const [selected, setSelected] = useState([]);
+
+    const serverUrl = process.env.REACT_APP_SERVER_BASE_URL;
     
     const  navigate = useNavigate();
 
@@ -27,7 +29,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
                 token: oauthUser.access_token,
             };
     
-            axios.post(`http://localhost:8080/users/files/download?id=${selection.id}`, requestBody, {
+            axios.post(`${serverUrl}/users/files/download?id=${selection.id}`, requestBody, {
                 headers,
                 responseType: 'blob'
             })
@@ -63,7 +65,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
                 token: oauthUser.access_token,
             };
     
-            axios.delete(`http://localhost:8080/users/files?id=${selection.id}`, {
+            axios.delete(`${serverUrl}/users/files?id=${selection.id}`, {
                 data: requestBody,
                 headers,
                 responseType: 'blob'
@@ -73,7 +75,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
             })
             .catch(error => {
                 console.error('Error deleting file:', error);
-                setOauthUser(null);
+                // setOauthUser(null);
             });
         });
     
@@ -87,14 +89,23 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
         };
 
         console.log("Sending preview request...");
-        axios.post("http://localhost:8080/users/preview", { token: oauthUser.access_token }, { headers })
+        axios.post(`${serverUrl}/users/preview`, { token: oauthUser.access_token }, { headers })
             .then(response => {
                 console.log('Preview recieved');
                 setUserPreviews(response.data);
             })
             .catch(error => {
-                console.error('Error retrieving preview:', error);
-                setUserPreviews(null);
+                if (error.response.status == '404' && error.response.data == 'User Does Not Exist') {
+                    axios.post(`${serverUrl}/users`, { token: oauthUser.access_token }, { headers })
+                        .then(response => {
+                            console.log('User Created:', response.email);
+                        })
+                        .catch(createError => {
+                            console.error('Error getting preview:', error);
+                            console.error('Error Creating User:', createError);
+                            setUserPreviews(null);
+                        });
+                }
             });
     }, [oauthUser]);
 

@@ -148,24 +148,24 @@ public class UserController {
     // }
 
     // Get user and all files associated with them
-    @GetMapping("/users")
-    @CrossOrigin(origins = frontendEndpoint)
-    public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
-        OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
-        if(oauthUser == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
-        }
+    // @GetMapping("/users")
+    // @CrossOrigin(origins = frontendEndpoint)
+    // public ResponseEntity<?> getUser(@RequestBody UserDTO userDTO) {
+    //     OAuthUser oauthUser = verifyJwtToken(userDTO.getToken());
+    //     if(oauthUser == null) {
+    //         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token Mismatch");
+    //     }
 
-        Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
+    //     Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
 
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            return ResponseEntity.ok(user);
+    //     if (userOptional.isPresent()) {
+    //         User user = userOptional.get();
+    //         return ResponseEntity.ok(user);
 
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
+    //     } else {
+    //         return ResponseEntity.notFound().build();
+    //     }
+    // }
 
     // Delete user and all files associated with them
     @DeleteMapping("/users")
@@ -213,13 +213,13 @@ public class UserController {
         }
 
         if (!userRepository.existsById(oauthUser.getSub())) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Does Not Exist");
         }
 
         Optional<User> userOptional = userRepository.findById(oauthUser.getSub());
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
+        // if (userOptional.isEmpty()) {
+        //     return ResponseEntity.notFound().build();
+        // }
 
          User user = userOptional.get();
 

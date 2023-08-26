@@ -5,6 +5,8 @@ import axios from 'axios';
 const UploadModal = ({ oauthUser, handleClose, getPreview }) => {
     const [selectedFile, setSelectedFile] = useState(null);
 
+    const serverUrl = process.env.REACT_APP_SERVER_BASE_URL;
+
     const handleFileDrop = (acceptedFiles) => {
         if (acceptedFiles && acceptedFiles.length > 0) {
             setSelectedFile(acceptedFiles[0]);
@@ -18,7 +20,7 @@ const UploadModal = ({ oauthUser, handleClose, getPreview }) => {
             formData.append('file', selectedFile);
     
             try {
-                const response = await axios.post("http://localhost:8080/users/files/upload", formData, {
+                const response = await axios.post(`${serverUrl}/users/files/upload`, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                     },

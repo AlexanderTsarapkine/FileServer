@@ -8,7 +8,7 @@ import Box from '@mui/material/Box';
 
 import '../assets/styles.css';
 
-// const serverUrl = process.env.REACT_SERVER_BASE_URL;
+const serverUrl = process.env.REACT_APP_SERVER_BASE_URL;
 
 const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, deleteSelected, getPreview}) => {
 
@@ -32,7 +32,7 @@ const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, dele
             };
     
             console.log("Sending profile request...");
-            axios.post("http://localhost:8080/verify", { access_token: oauthUser.access_token }, { headers })
+            axios.post(`${serverUrl}/verify`, { access_token: oauthUser.access_token }, { headers })
             .then(response => {
                 console.log("Profile Recieved");
                 setUserProfile(response.data);
