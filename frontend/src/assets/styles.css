@@ -164,9 +164,6 @@ button.sign-out-button {
 
 .profile-name p {
   margin: 0px;
-  /* color: #FE7600; */
-  /* font-weight: bold; */
-  /* font-family: monospace; */
 }
 
 p.files-selected {
@@ -174,12 +171,39 @@ p.files-selected {
   color: #FE7600;
 }
 
-.uploadModal{
+.upload-modal-content {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 40px;
-  background-color: white;
+  width: 400px;
+  background-color: #fff;
   border: 2px solid #000;
+  box-shadow: 0px 0px 24px rgba(0, 0, 0, 0.24);
+  padding: 16px;
+  border-radius: 8px;
+}
+
+@media only screen and (max-width: 600px) {
+  .FileDashboard {
+    width: 12rem;
+  }
+
+  .FilePreviewContainer {
+    gap: 0.5rem;
+    margin: 1rem;
+    flex: 1;
+    align-content: flex-start;
+  }
+
+  .FilePreview {
+    width: 8rem;
+    height: 5rem;
+  }
+
+  .FilePreview img {
+    max-width: 8rem;
+    max-height: 5rem;
+  }
+  
 }

@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { googleLogout } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
 import UploadModal from './UploadModal';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 
+import '../assets/styles.css';
+
 // const serverUrl = process.env.REACT_SERVER_BASE_URL;
 
 const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, deleteSelected, getPreview}) => {
+
+    const  navigate = useNavigate();
 
     const [userProfile, setUserProfile] = useState(null);
 
@@ -40,20 +45,10 @@ const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, dele
 
         if (oauthUser) {
             getProfile();
-        } // else logout()?
-    }, [oauthUser, setOauthUser]);
-
-    const style = {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: 400,
-        bgcolor: 'background.paper',
-        border: '2px solid #000',
-        boxShadow: 24,
-        p: 4,
-      };
+        } else {
+            navigate('/', { replace: true });
+        }
+    }, [oauthUser, setOauthUser, navigate]);
 
     return (
         <div className="FileDashboard">
@@ -70,7 +65,7 @@ const FileDashboard= ({setOauthUser, oauthUser, selected, downloadSelected, dele
                 aria-labelledby="modal-modal-title"
                 aria-describedby="modal-modal-description"
             >
-                <Box sx={style}>
+                <Box className="upload-modal-content">
                     <UploadModal oauthUser={oauthUser} handleClose={handleClose} getPreview={getPreview}/>
                 </Box>
             </Modal>

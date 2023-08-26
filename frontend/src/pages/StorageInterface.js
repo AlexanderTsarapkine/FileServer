@@ -96,7 +96,7 @@ const StorageInterface = ({setOauthUser, oauthUser}) => {
                 console.error('Error retrieving preview:', error);
                 setUserPreviews(null);
             });
-    }, [oauthUser.access_token]);
+    }, [oauthUser]);
 
     // add a create user if first preview call doesnt work
     useEffect(() => {
